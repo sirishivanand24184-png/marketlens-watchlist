@@ -134,6 +134,11 @@ function attentionLabel(score = 0) {
   return "Quiet";
 }
 
+function rowAttentionLabel(item: Item, needsBaseline: boolean) {
+  if (needsBaseline && (item.score ?? 0) < 30) return "Baseline needed";
+  return attentionLabel(item.score);
+}
+
 function attentionTone(score = 0) {
   if (score >= 60) return "high";
   if (score >= 30) return "medium";
@@ -713,7 +718,9 @@ export default function Home() {
               </strong>
             </div>
             <div className="rowScore">
-              <span className={`quietBadge ${attentionTone(item.score)}`}>{attentionLabel(item.score)}</span>
+              <span className={`quietBadge ${needsFirstBaseline && (item.score ?? 0) < 30 ? "pending" : attentionTone(item.score)}`}>
+                {rowAttentionLabel(item, needsFirstBaseline)}
+              </span>
               <div className="miniMeter">
                 <span style={{ width: scorePercent(item.score ?? 0) }} />
               </div>
@@ -1460,6 +1467,11 @@ export default function Home() {
         .quietBadge.high {
           background: #fff1f2;
           color: #be123c;
+        }
+
+        .quietBadge.pending {
+          background: #eef2ff;
+          color: #3730a3;
         }
 
         .scoreDetails {
