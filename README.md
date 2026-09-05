@@ -45,28 +45,6 @@ The app keeps a watchlist, stores explicit viewed-price baselines, compares late
 - Stale prices are down-weighted and are not baseline-eligible.
 - If all symbols are unverified, the UI says **Live market data temporarily unavailable** instead of claiming there were no meaningful moves.
 
-## Non-Guaranteed Parts and Alternatives
-
-### Quote Provider Availability
-
-Yahoo Finance can rate-limit or fail during judging. The app handles that in three layers:
-
-- Per-symbol retry and `Promise.allSettled`, so one failed ticker does not blank the whole watchlist.
-- Last verified snapshot fallback, clearly marked `STALE`.
-- First-run deterministic placeholder prices, clearly marked `SIMULATED`, never saved as verified baseline data.
-
-The app also includes an explicit **Demo scenario** with fixed test data: TSLA high attention, AAPL medium attention, MSFT quiet. This exists only to prove the scoring and product flow when live data is unavailable.
-
-This project currently pins `yahoo-finance2` to `3.12.0` because the local runtime is Node 20. The package's v4 line requires Node 22+, so the clean upgrade path is: move the deployment runtime to Node 22, then upgrade to `yahoo-finance2@^4`.
-
-### Database Availability
-
-The production path expects Postgres through Prisma. Recommended options are Neon or Supabase. If the database is not configured, the app cannot persist watchlists or baselines, so this should be set up before submission.
-
-### Real-Time Market Movement
-
-The challenge asks for a smart watchlist, not a trading terminal. The app deliberately avoids candlestick charts, news feeds, authentication, portfolios, and order placement. The core differentiation is the persisted baseline comparison and explainable attention ranking.
-
 ## Setup
 
 ```bash
