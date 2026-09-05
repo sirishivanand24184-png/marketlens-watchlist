@@ -1,0 +1,68 @@
+// Smart Market Watchlist — data model
+// Design notes:
+// - Snapshot pattern (not just "current price") is what makes "what changed since
+//   last checked" possible without recomputing history on every request.
+// - PriceHistory stores a rolling window per symbol so we can compute each stock's
+//   OWN volatility baseline, instead of a flat "±2% = important" rule for everyone.
+// - staleness is tracked explicitly (fetchedAt vs marketTimestamp) so the UI can be
+//   honest about delayed/conflicting data instead of hiding it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(cuid())
+  email      String      @unique
+  createdAt  DateTime    @default(now())
+  watchlists Watchlist[]
+}
+
+model Watchlist {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  name      String            @default("My Watchlist")
+  createdAt DateTime          @default(now())
+  items     WatchlistItem[]
+  snapshots WatchlistSnapshot[]
+}
+
+model WatchlistItem {
+  id          String    @id @default(cuid())
+  watchlistId String
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id])
+  symbol      String
+  addedAt     DateTime  @default(now())
+
+  @@unique([watchlistId, symbol])
+}
+
+// A snapshot is written every time the user actually VIEWS the watchlist.
+// The next visit diffs live data against the most recent snapshot before it —
+// this is the mechanism behind "return later and see what has changed."
+model WatchlistSnapshot {
+  id          String    @id @default(cuid())
+  watchlistId String
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id])
+  viewedAt    DateTime  @default(now())
+  data        Json      // { symbol: { price, volume, marketTimestamp } }[]
+}
+
+// Rolling per-symbol price history, used to compute each stock's own
+// volatility baseline (stddev of returns) rather than a single global threshold.
+model PriceHistory {
+  id              String   @id @default(cuid())
+  symbol          String
+  price           Float
+  volume          BigInt?
+  marketTimestamp DateTime // when the exchange says this price is from
+  fetchedAt       DateTime @default(now()) // when WE fetched it (staleness gap)
+
+  @@index([symbol, marketTimestamp])
+}
